@@ -1,0 +1,15 @@
+# Example configuration (copy to config.yaml and customize; not loaded by default)
+addr: ":8080"
+
+zhipu_api_key: ""
+stepfun_api_key: ""
+dashscope_api_key: ""
+
+volcengine_app_id: ""
+volcengine_access_key: ""
+volcengine_resource_id: "volc.speech.dialog"
+volcengine_app_key: "PlgvMymc7f3tQnJ6"
+
+bailian_workspace_id: ""
+bailian_app_id: ""
+bailian_user_id: "voice-realtime-user"

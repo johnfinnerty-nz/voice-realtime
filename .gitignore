@@ -1,0 +1,25 @@
+# Binaries
+/voice-realtime
+/voice-realtime.exe
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test / coverage
+*.test
+*.out
+coverage.txt
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Secrets
+.env
+configs/config.yaml
+
+# OS
+.DS_Store
+Thumbs.db
