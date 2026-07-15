@@ -1,0 +1,61 @@
+---
+name: Feature Request
+description: 新功能、新厂商或改进建议
+title: "[feat]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        大型架构变更请先使用 **RFC** 模板讨论。
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 领域
+      multiple: true
+      options:
+        - area/gateway
+        - area/protocol
+        - area/provider
+        - area/observability
+        - area/docs
+        - provider/new
+    validations:
+      required: true
+
+  - type: dropdown
+    id: phase
+    attributes:
+      label: 建议归属 Phase
+      options:
+        - roadmap/phase-1
+        - roadmap/phase-2
+        - roadmap/phase-3
+        - roadmap/phase-4
+        - roadmap/phase-0
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 要解决什么问题？
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: volunteer
+    attributes:
+      label: 我愿意
+      options:
+        - label: 提交 PR 实现
+        - label: 帮忙联调验证
+        - label: 补充文档

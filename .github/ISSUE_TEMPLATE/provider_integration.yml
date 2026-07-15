@@ -1,0 +1,53 @@
+name: Provider Integration
+description: 接入新的云厂商端到端语音大模型
+title: "[provider]: "
+labels: ["enhancement", "provider/new", "type/rfc"]
+body:
+  - type: input
+    id: vendor
+    attributes:
+      label: 厂商名称
+      placeholder: 例如 MiniMax、腾讯云
+    validations:
+      required: true
+
+  - type: input
+    id: upstream
+    attributes:
+      label: 上游 WebSocket 端点
+      placeholder: wss://...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: strategy
+    attributes:
+      label: 建议适配策略
+      options:
+        - Proxy（类 OpenAI Realtime）
+        - Translate（自定义协议）
+        - 不确定，需要调研
+    validations:
+      required: true
+
+  - type: input
+    id: docs
+    attributes:
+      label: 官方文档链接
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: 协议差异备注
+      description: 鉴权方式、音频格式、状态机要点
+
+  - type: checkboxes
+    id: volunteer
+    attributes:
+      label: 我能提供
+      options:
+        - label: 测试账号 / API Key（私下提供，勿写在 Issue 正文）
+        - label: 提交 Provider 实现 PR
+        - label: 编写 docs/providers/*.md 映射表

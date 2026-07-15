@@ -1,0 +1,63 @@
+---
+name: Bug Report
+description: 报告功能异常或协议映射错误
+title: "[bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        提交前请确认：已阅读 [ARCHITECTURE.md](../docs/ARCHITECTURE.md)，Issue 未重复。
+
+  - type: dropdown
+    id: provider
+    attributes:
+      label: 云厂商 Provider
+      options:
+        - zhipu
+        - stepfun
+        - volcengine
+        - bailian
+        - gateway（非厂商）
+        - other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: 版本 / Commit
+      placeholder: v0.1.0 或 commit hash
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. export ZHIPU_API_KEY=...
+        2. go run ./cmd/voice-realtime
+        3. 连接 ws://...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志（请脱敏 API Key）
+      render: shell

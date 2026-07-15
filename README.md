@@ -2,82 +2,128 @@
 
 [![CI](https://github.com/lixuanqun/voice-realtime/actions/workflows/ci.yml/badge.svg)](https://github.com/lixuanqun/voice-realtime/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Go 1.21+](https://img.shields.io/badge/go-1.21+-blue.svg)](https://go.dev/dl/)
+[![Go 1.21+](https://img.shields.io/badge/go-1.21+-00ADD8.svg)](https://go.dev/dl/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![OpenAI Realtime](https://img.shields.io/badge/protocol-OpenAI%20Realtime-412991.svg)](https://platform.openai.com/docs/guides/realtime)
 
-**多云端到端语音大模型网关** — 对外暴露 [OpenAI Realtime API](https://platform.openai.com/docs/guides/realtime) 兼容 WebSocket，统一接入火山豆包、阿里云百炼、智谱 GLM-Realtime、阶跃星辰 StepFun Realtime。
+**[中文](#voice-realtime-1)** · **[English](#voice-realtime-en)** · **[架构](docs/ARCHITECTURE.md)** · **[路线](docs/ROADMAP.md)** · **[贡献](CONTRIBUTING.md)**
+
+---
+
+## voice-realtime
+
+> **一套 OpenAI Realtime 协议，对接多家国内端到端语音大模型。**
+
+换云厂商不改客户端 —— 只需修改 WebSocket URL 上的 `provider` 参数。
+
+```text
+ws://localhost:8080/v1/realtime?provider=zhipu&model=glm-realtime-flash
+ws://localhost:8080/v1/realtime?provider=stepfun&model=stepaudio-2.5-realtime
+ws://localhost:8080/v1/realtime?provider=volcengine
+ws://localhost:8080/v1/realtime?provider=bailian
+```
 
 ```bash
 export ZHIPU_API_KEY=your_key
 go run ./cmd/voice-realtime
-# ws://localhost:8080/v1/realtime?provider=zhipu&model=glm-realtime-flash
 ```
 
-## 支持的云厂商
+### 为什么需要这个项目？
 
-| Provider | 查询参数 `provider` | 默认模型 | 适配方式 |
-|----------|---------------------|----------|----------|
-| 智谱 | `zhipu` | `glm-realtime-flash` | OpenAI Realtime 透明代理 |
-| 阶跃星辰 | `stepfun` | `stepaudio-2.5-realtime` | OpenAI Realtime 透明代理 |
-| 火山豆包 | `volcengine` | — | 二进制协议双向转换 |
-| 阿里云百炼 | `bailian` | `multimodal-dialog` | 多模态交互 API 状态机 |
+国内端到端语音大模型（豆包、百炼、智谱、阶跃等）**协议各不相同**：有的兼容 OpenAI Realtime，有的是二进制帧，有的带复杂状态机。voice-realtime 在中间做**统一网关**：
 
-## 快速开始
-
-### 1. 配置环境变量
-
-复制 [`.env.example`](.env.example) 并填入对应厂商密钥（只需配置你要用的厂商）：
-
-```bash
-cp .env.example .env
+```text
+  你的客户端（Vui / OpenClaw / 自研 App）
+              │
+              │  OpenAI Realtime（PCM16 24kHz）
+              ▼
+       ┌──────────────┐
+       │ voice-realtime│  ← 密钥只在服务端，客户端无感换云
+       └──────┬───────┘
+    ┌────────┼────────┬────────┐
+    ▼        ▼        ▼        ▼
+  智谱     阶跃     火山     百炼
 ```
 
-### 2. 启动网关
+### 支持的云厂商
+
+| 厂商 | `provider` | 适配策略 | 状态 |
+|------|-------------|----------|------|
+| 智谱 GLM-Realtime | `zhipu` | 透明代理 | 🚧 骨架可用，待联调 |
+| 阶跃星辰 StepFun | `stepfun` | 透明代理 | 🚧 骨架可用，待联调 |
+| 火山豆包 | `volcengine` | 二进制协议转换 | 🚧 开发中 |
+| 阿里云百炼 | `bailian` | 多模态状态机 | 🚧 开发中 |
+
+> 状态说明见 [开发路线](docs/ROADMAP.md)。
+
+### 核心机制（30 秒版）
+
+| 机制 | 说明 |
+|------|------|
+| **北向统一** | 客户端只讲 OpenAI Realtime API |
+| **Provider 插件** | 新厂商 = 实现一个 Go 接口 + 注册 |
+| **双适配策略** | 透明代理（智谱/阶跃）或 协议转换（火山/百炼） |
+| **服务端持钥** | API Key 不下发客户端 |
+| **音频管线** | 自动 24 kHz ↔ 16 kHz 重采样 |
+
+详细架构图与序列图 → **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**
+
+### 快速开始
 
 ```bash
+git clone https://github.com/lixuanqun/voice-realtime.git
+cd voice-realtime
+cp .env.example .env    # 填入你要用的厂商 Key
+
+go test ./...
 go run ./cmd/voice-realtime
 ```
 
-### 3. 连接
+### 参与贡献
 
-```
-ws://localhost:8080/v1/realtime?provider=stepfun&model=stepaudio-2.5-realtime
-```
+我们**特别欢迎**以下贡献：
 
-客户端使用 OpenAI Realtime 协议：`session.update`、`input_audio_buffer.append`（PCM16 24kHz base64）、`response.audio.delta` 等。详见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
+- 有火山 / 百炼账号的同学帮忙**真实联调**
+- 编写 **Python / JS 示例客户端**（`good first issue`）
+- **新增云厂商** Provider 插件
+- 文档翻译、协议映射表补充
 
-## 环境变量
+→ [CONTRIBUTING.md](CONTRIBUTING.md) · [Good First Issues](https://github.com/lixuanqun/voice-realtime/issues?q=is%3Aopen+label%3A%22good+first+issue%22)
 
-| 变量 | 用途 |
+### 文档索引
+
+| 文档 | 内容 |
 |------|------|
-| `VOICE_REALTIME_ADDR` | 监听地址，默认 `:8080` |
-| `ZHIPU_API_KEY` | 智谱 API Key |
-| `STEPFUN_API_KEY` | 阶跃星辰 API Key |
-| `VOLCENGINE_APP_ID` / `VOLCENGINE_ACCESS_KEY` | 火山豆包实时对话 |
-| `DASHSCOPE_API_KEY` | 阿里云百炼 |
-| `BAILIAN_WORKSPACE_ID` / `BAILIAN_APP_ID` | 百炼多模态应用 |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | 架构图、六大核心机制、目录职责 |
+| [ROADMAP.md](docs/ROADMAP.md) | Phase 0–5 开发路线与里程碑 |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | 贡献流程、新增 Provider 指南 |
+| [providers/](docs/providers/) | 各厂商协议映射表 |
 
-## 项目结构
+### License
 
-```
-cmd/voice-realtime/     # 入口
-internal/gateway/       # WebSocket 网关
-internal/realtime/      # OpenAI Realtime 事件与音频编解码
-internal/providers/     # 云厂商插件（zhipu / stepfun / volcengine / bailian）
-docs/                   # 架构与厂商接入文档
-```
+[MIT](LICENSE)
 
-## 开发
+---
+
+## voice-realtime (EN)
+
+> **One OpenAI Realtime API. Multiple Chinese cloud voice LLMs.**
+
+Switch providers without changing your client — just update the `provider` query parameter.
+
+**Supported**: Zhipu GLM-Realtime · StepFun · Volcengine Doubao · Alibaba Bailian
+
+| Doc | Description |
+|-----|-------------|
+| [Architecture](docs/ARCHITECTURE.md) | Diagrams, plugin model, adapter strategies |
+| [Roadmap](docs/ROADMAP.md) | Phased delivery plan |
+| [Contributing](CONTRIBUTING.md) | How to add a new provider |
+
+**We need help with**: real-account integration testing, sample clients, new provider plugins.
 
 ```bash
-make test    # 运行测试
-make build   # 编译二进制
-make run     # 启动服务
+go run ./cmd/voice-realtime
+# ws://localhost:8080/v1/realtime?provider=zhipu&model=glm-realtime-flash
 ```
 
-## 相关项目
-
-本仓库位于 [voice_repo](https://github.com/lixuanqun) monorepo 的 `realtime/` 目录，与 [Vui](https://github.com/lixuanqun) Realtime API 规范对齐，可与 OpenClaw、自研客户端对接。
-
-## License
-
-MIT
+MIT License.

@@ -1,0 +1,41 @@
+---
+name: RFC
+description: 架构或协议设计讨论（大型改动请先开 RFC）
+title: "[rfc]: "
+labels: ["type/rfc", "enhancement"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: 摘要
+      description: 一两句话说明要改什么、为什么
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: 动机与背景
+    validations:
+      required: true
+
+  - type: textarea
+    id: design
+    attributes:
+      label: 设计方案
+      description: 可附 mermaid 图、接口草案
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 备选方案
+    validations:
+      required: false
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: 影响范围
+      description: 哪些 Provider / 客户端会受影响
