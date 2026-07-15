@@ -1,0 +1,33 @@
+# Route definitions for voice-realtime gateway (RFC 001)
+# Copy to configs/routes.yaml and customize. Not loaded by default in MVP.
+
+routes:
+  - name: voice-default
+    strategy:
+      mode: fallback
+      on_errors:
+        - dial_timeout
+        - dial_refused
+        - http_429
+        - http_502
+    targets:
+      - provider: stepfun
+        model: stepaudio-2.5-realtime
+        weight: 70
+      - provider: zhipu
+        model: glm-realtime-flash
+        weight: 30
+    timeout_ms: 30000
+    max_sessions_per_key: 100
+
+  - name: voice-volcengine
+    strategy:
+      mode: single
+    targets:
+      - provider: volcengine
+
+  - name: voice-bailian
+    strategy:
+      mode: single
+    targets:
+      - provider: bailian

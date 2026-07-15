@@ -6,7 +6,7 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![OpenAI Realtime](https://img.shields.io/badge/protocol-OpenAI%20Realtime-412991.svg)](https://platform.openai.com/docs/guides/realtime)
 
-**[中文](#voice-realtime-1)** · **[English](#voice-realtime-en)** · **[架构](docs/ARCHITECTURE.md)** · **[路线](docs/ROADMAP.md)** · **[贡献](CONTRIBUTING.md)**
+**[中文](#voice-realtime-1)** · **[English](#voice-realtime-en)** · **[架构](docs/ARCHITECTURE.md)** · **[路线](docs/ROADMAP.md)** · **[RFC](docs/rfc/README.md)** · **[贡献](CONTRIBUTING.md)**
 
 ---
 
@@ -94,8 +94,9 @@ go run ./cmd/voice-realtime
 
 | 文档 | 内容 |
 |------|------|
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | 架构图、六大核心机制、目录职责 |
-| [ROADMAP.md](docs/ROADMAP.md) | Phase 0–5 开发路线与里程碑 |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | 现状/目标五层架构、六大机制、对照表 |
+| [ROADMAP.md](docs/ROADMAP.md) | Phase 0–5，P1a/P1b/P1c 拆分 |
+| [rfc/](docs/rfc/README.md) | 架构 RFC（Middleware、热路径 Tier） |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 贡献流程、新增 Provider 指南 |
 | [providers/](docs/providers/) | 各厂商协议映射表 |
 

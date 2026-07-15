@@ -19,6 +19,7 @@ coverage.txt
 # Secrets
 .env
 configs/config.yaml
+configs/routes.yaml
 
 # OS
 .DS_Store

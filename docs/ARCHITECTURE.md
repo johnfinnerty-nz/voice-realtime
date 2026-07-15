@@ -36,7 +36,9 @@
 
 ---
 
-## 2. 总体架构
+## 2. 现状架构（MVP，已实现）
+
+> 下图描述**当前代码**的数据流。Router / Codec 在实现上尚未独立为包，详见 [§4 现状 vs 目标](#4-现状-vs-目标对照)。
 
 ```mermaid
 flowchart TB
@@ -78,9 +80,94 @@ flowchart TB
 
 ---
 
-## 3. 核心架构机制
+## 3. 目标态五层架构
 
-### 3.1 机制一：北向协议统一（Northbound Unification）
+借鉴 [LiteLLM](https://github.com/BerriAI/litellm)、[Portkey](https://github.com/Portkey-AI/gateway)、[Bifrost](https://github.com/maximhq/bifrost)、[Helicone](https://github.com/Helicone/helicone) 的网关实践，目标演进到 **控制平面与数据平面分离** 的五层模型：
+
+```mermaid
+flowchart TB
+    subgraph L1 [L1 北向接入]
+        WS["/v1/realtime"]
+        Auth["Connect-time Auth"]
+        Limit["Rate / Session Cap"]
+    end
+
+    subgraph L2 [L2 控制平面]
+        CFG["routes.yaml"]
+        Router["Router: single/fallback/lb"]
+        Policy["Timeout / CircuitBreaker"]
+    end
+
+    subgraph L3 [L3 会话管道]
+        MW["Middleware Chain"]
+        Barge["Barge-in"]
+    end
+
+    subgraph L4 [L4 适配平面]
+        Proxy["ProxyStrategy"]
+        Trans["TranslateStrategy"]
+        Map["EventMapper Registry"]
+        Codec["Codec Pipeline"]
+    end
+
+    subgraph L5 [L5 南向上游]
+        Cloud["Cloud Realtime APIs"]
+    end
+
+    subgraph L6 [L6 异步平面]
+        Obs["Logs / Metrics / Trace"]
+    end
+
+    WS --> Auth --> Limit --> Router
+    Router --> MW --> Proxy
+    Router --> MW --> Trans
+    Proxy --> Cloud
+    Trans --> Map --> Codec --> Cloud
+    MW -.->|async| Obs
+```
+
+| 层级 | 职责 | 业界参考 | RFC |
+|------|------|----------|-----|
+| L1 北向接入 | WS 升级、鉴权、限流 | ai-portfolio-voice-service | [RFC 001](rfc/001-middleware-and-routes.md) |
+| L2 控制平面 | 配置驱动路由、fallback | Portkey、LiteLLM | [RFC 001](rfc/001-middleware-and-routes.md) |
+| L3 会话管道 | Middleware 链、barge-in | Bifrost | [RFC 001](rfc/001-middleware-and-routes.md) |
+| L4 适配平面 | Provider + 双策略 + 映射表 | LiteLLM transformations | — |
+| L5 南向上游 | 云厂商 WS | — | — |
+| L6 异步平面 | 观测不挡热路径 | Helicone | [RFC 002](rfc/002-realtime-hotpath-tiers.md) |
+
+**北向 URL 演进：**
+
+```text
+# 当前（MVP）
+ws://host/v1/realtime?provider=zhipu&model=glm-realtime-flash
+
+# 目标（配置驱动）
+ws://host/v1/realtime?route=voice-default
+```
+
+---
+
+## 4. 现状 vs 目标对照
+
+| 维度 | 现状（MVP） | 目标态 | 借鉴 | Phase |
+|------|-------------|--------|------|-------|
+| 路由 | URL `?provider=` | `routes.yaml` + fallback | Portkey | P1a |
+| 横切能力 | handler 内联 | Middleware 链 | Bifrost | P1a |
+| Provider 插件 | `Provider` 接口 + registry | 保留，外加 Strategy 分层 | LiveKit Agents | P1 |
+| 协议映射 | 手写 `translate()` | 表驱动 EventMapper | LiteLLM | P2/P3 |
+| Proxy 热路径 | 基本透传 | Tier-0 零 JSON 解析 | openai-realtime-proxy | P1 |
+| Translate 热路径 | 每帧分配 + 线性重采样 | Tier-1 Pool + 快速重采样 | — | P4a |
+| 观测 | 同步 slog | Tier-2 异步 metrics | Helicone | P4b |
+| 北向鉴权 | 无 | Virtual Key / JWT | LiteLLM | P4 |
+| 熔断降级 | 无 | Dial 阶段 fallback + CB | Portkey | P4 |
+| 契约测试 | 少量 unit | mock upstream 回放 | LiveKit Agents | P1b |
+| 压测门禁 | 文档目标 only | benchmark CI | LiteLLM | P4 |
+
+---
+
+## 5. 核心架构机制
+
+### 5.1 机制一：北向协议统一（Northbound Unification）
 
 **原则**：客户端只讲一种语言 —— [OpenAI Realtime API](https://platform.openai.com/docs/guides/realtime)。
 
@@ -102,7 +189,7 @@ ws://{host}/v1/realtime?provider={name}&model={model_id}
 
 ---
 
-### 3.2 机制二：Provider 插件（南向可扩展）
+### 5.2 机制二：Provider 插件（南向可扩展）
 
 所有云厂商通过同一套接口接入，注册表模式参考 [asr-eval backends](https://github.com/lixuanqun/asr-eval)。
 
@@ -155,7 +242,7 @@ type UpstreamConn interface {
 
 ---
 
-### 3.3 机制三：双适配策略（Proxy vs Translate）
+### 5.3 机制三：双适配策略（Proxy vs Translate）
 
 ```mermaid
 flowchart LR
@@ -216,7 +303,7 @@ stateDiagram-v2
 
 ---
 
-### 3.4 机制四：会话与打断（Session & Barge-in）
+### 5.4 机制四：会话与打断（Session & Barge-in）
 
 ```mermaid
 sequenceDiagram
@@ -245,7 +332,7 @@ sequenceDiagram
 
 ---
 
-### 3.5 机制五：音频管线（Audio Pipeline）
+### 5.5 机制五：音频管线（Audio Pipeline）
 
 ```text
          北向 (OpenAI)              南向 (火山/百炼)
@@ -263,7 +350,7 @@ sequenceDiagram
 
 ---
 
-### 3.6 机制六：安全与配置
+### 5.6 机制六：安全与配置
 
 ```text
 ┌──────────────┐      无云厂商 Key       ┌──────────────┐
@@ -288,7 +375,7 @@ sequenceDiagram
 
 ---
 
-## 4. 目录与职责
+## 6. 目录与职责
 
 ```text
 cmd/voice-realtime/          # 进程入口、Provider 注册
@@ -310,7 +397,7 @@ docs/
 
 ---
 
-## 5. 非功能目标（Phase 4+）
+## 7. 非功能目标（Phase 4+）
 
 | 维度 | 目标 | 状态 |
 |------|------|------|
@@ -322,8 +409,11 @@ docs/
 
 ---
 
-## 6. 相关阅读
+## 8. 相关阅读
 
+- [RFC 索引](rfc/README.md) — 架构决策记录
+- [RFC 001 Middleware + routes.yaml](rfc/001-middleware-and-routes.md)
+- [RFC 002 热路径 Tier 分级](rfc/002-realtime-hotpath-tiers.md)
 - [开发路线 ROADMAP.md](ROADMAP.md)
 - [参与贡献 CONTRIBUTING.md](../CONTRIBUTING.md)
 - [厂商接入 docs/providers/](providers/)
