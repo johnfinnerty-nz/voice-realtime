@@ -10,6 +10,8 @@ from typing import Any
 
 import websocket
 
+UNSUCCESSFUL_RESPONSE_STATUSES = {"cancelled", "failed", "incomplete"}
+
 
 def send_event(connection: websocket.WebSocket, event: dict[str, Any]) -> None:
     """Send one OpenAI Realtime JSON event."""
@@ -48,6 +50,16 @@ def receive_response(connection: websocket.WebSocket, output_path: Path) -> None
         elif event_type == "error":
             raise RuntimeError(event.get("error", {}).get("message", "Gateway returned an error"))
         elif event_type == "response.done":
+            response = event.get("response", {})
+            status = response.get("status")
+            if status in UNSUCCESSFUL_RESPONSE_STATUSES:
+                status_details = response.get("status_details")
+                details = (
+                    json.dumps(status_details, ensure_ascii=False)
+                    if status_details is not None
+                    else "no status details"
+                )
+                raise RuntimeError(f"Response ended with status {status}: {details}")
             break
 
     if output:
