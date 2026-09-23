@@ -12,8 +12,26 @@ This minimal client connects to a local `voice-realtime` gateway using the OpenA
 ```bash
 cd examples/python_client
 python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
+```
+
+Activate the virtual environment on macOS or Linux:
+
+```bash
+source .venv/bin/activate
+```
+
+On Windows PowerShell:
+
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+On Windows Command Prompt, use `.venv\Scripts\activate.bat` instead.
+
+Then install the dependency and run the client:
+
+```bash
+python -m pip install -r requirements.txt
 python realtime_client.py
 ```
 
@@ -30,3 +48,15 @@ python realtime_client.py --audio input.pcm --output response.pcm
 ```
 
 The example deliberately keeps playback out of scope. Use any PCM16-capable player or convert the output to WAV for local playback.
+
+Audio is uploaded in chunks of at most 18,000 raw bytes so each base64-encoded JSON event stays below the gateway's default 32 KiB WebSocket read limit. Connection and socket operations use a 30-second timeout so a stalled gateway does not leave the client waiting indefinitely. This is a per-operation timeout, not a limit on the total response duration. The connection is closed on both success and failure.
+
+## Tests
+
+With the virtual environment active and the dependency installed, run this from the repository root:
+
+```bash
+python -m unittest examples.python_client.test_realtime_client
+```
+
+The tests use a mock transport and temporary audio files. No running gateway or provider API key is needed. They cover client startup and cleanup, audio chunk sizes and event ordering, response audio reassembly, missing audio deltas, gateway errors, unsuccessful responses, and receive timeouts.

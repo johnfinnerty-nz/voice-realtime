@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+from contextlib import closing
 from pathlib import Path
 from typing import Any
 
@@ -21,7 +22,8 @@ def send_event(connection: websocket.WebSocket, event: dict[str, Any]) -> None:
 def append_audio(connection: websocket.WebSocket, audio_path: Path) -> None:
     """Send raw PCM16 audio as input_audio_buffer.append events."""
     audio = audio_path.read_bytes()
-    chunk_size = 48_000
+    # Leave room for base64 and JSON within the gateway's 32 KiB read limit.
+    chunk_size = 18_000
     for offset in range(0, len(audio), chunk_size):
         encoded = base64.b64encode(audio[offset : offset + chunk_size]).decode("ascii")
         send_event(
@@ -46,9 +48,11 @@ def receive_response(connection: websocket.WebSocket, output_path: Path) -> None
         print(f"Received: {event_type}")
 
         if event_type == "response.audio.delta":
-            output.extend(base64.b64decode(event["delta"]))
+            output.extend(base64.b64decode(event.get("delta", "")))
         elif event_type == "error":
-            raise RuntimeError(event.get("error", {}).get("message", "Gateway returned an error"))
+            raise RuntimeError(
+                event.get("error", {}).get("message", "Gateway returned an error")
+            )
         elif event_type == "response.done":
             response = event.get("response", {})
             status = response.get("status")
@@ -74,11 +78,15 @@ def main() -> None:
         default="ws://localhost:8080/v1/realtime?provider=zhipu&model=glm-realtime-flash",
         help="voice-realtime WebSocket URL",
     )
-    parser.add_argument("--audio", type=Path, help="Optional 24 kHz mono PCM16 input file")
-    parser.add_argument("--output", type=Path, default=Path("response.pcm"), help="PCM16 output path")
+    parser.add_argument(
+        "--audio", type=Path, help="Optional 24 kHz mono PCM16 input file"
+    )
+    parser.add_argument(
+        "--output", type=Path, default=Path("response.pcm"), help="PCM16 output path"
+    )
     args = parser.parse_args()
 
-    with websocket.create_connection(args.url) as connection:
+    with closing(websocket.create_connection(args.url, timeout=30)) as connection:
         send_event(
             connection,
             {
